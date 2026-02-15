@@ -1,19 +1,20 @@
 
 import React, { useMemo } from 'react';
-import { FilterState, ReferralStatus, ReferralUrgency, AuthStatus, Referral } from '../../types';
+import { FilterState, Patient, ReferralStatus, ReferralUrgency, AuthStatus, Referral } from '../../types';
 import { COLORS, Icons, HOSPITALS, SPECIALTIES, generateMockReferrals } from '../../constants';
-import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, BarChart, Bar
 } from 'recharts';
 
 interface ReferralViewProps {
+  patients: Patient[];
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   onSelectReferral: (id: string) => void;
 }
 
-const ReferralView: React.FC<ReferralViewProps> = ({ filters, setFilters, onSelectReferral }) => {
+const ReferralView: React.FC<ReferralViewProps> = ({ patients, filters, setFilters, onSelectReferral }) => {
   const referrals = useMemo(() => generateMockReferrals(1284), []);
 
   const filteredReferrals = useMemo(() => {

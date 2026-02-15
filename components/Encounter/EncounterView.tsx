@@ -1,19 +1,20 @@
 
 import React, { useMemo } from 'react';
-import { FilterState, RiskLevel, AlertType, EncounterAlert } from '../../types';
+import { FilterState, Patient, RiskLevel, AlertType, EncounterAlert } from '../../types';
 import { COLORS, Icons, HOSPITALS, DEPARTMENTS, PROVIDER_TYPES, generateMockEncounterAlerts } from '../../constants';
-import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, AreaChart, Area
 } from 'recharts';
 
 interface EncounterViewProps {
+  patients: Patient[];
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   onSelectAlert: (id: string) => void;
 }
 
-const EncounterView: React.FC<EncounterViewProps> = ({ filters, setFilters, onSelectAlert }) => {
+const EncounterView: React.FC<EncounterViewProps> = ({ patients, filters, setFilters, onSelectAlert }) => {
   const alerts = useMemo(() => generateMockEncounterAlerts(142), []);
 
   const filteredAlerts = useMemo(() => {
