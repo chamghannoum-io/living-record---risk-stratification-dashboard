@@ -102,11 +102,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ stats, filters, setFilter
             <option>65+ years</option>
           </select>
         </div>
-        <button 
-          onClick={() => setFilters({
-            hospital: 'All Hospitals', branch: 'All Branches', gender: 'All Genders', 
+        <button
+          onClick={() => setFilters(prev => ({
+            ...prev,
+            hospital: 'All Hospitals', branch: 'All Branches', gender: 'All Genders',
             ageRange: 'All Ages', riskLevel: 'All Levels', conditionType: 'All Conditions', search: ''
-          })}
+          }))}
           className="ml-auto text-[#00D9FF] text-xs font-semibold hover:underline"
         >
           Clear All Filters

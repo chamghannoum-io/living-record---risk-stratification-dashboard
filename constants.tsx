@@ -191,7 +191,147 @@ export const generateMockPatients = (count: number): Patient[] => {
     const age = 18 + Math.floor(Math.random() * 70);
     const gender: Patient['gender'] = Math.random() > 0.5 ? 'Male' : (Math.random() > 0.9 ? 'Non-binary' : 'Female');
 
-    const behavioralAnomalies: BehavioralAnomaly[] = Array.from({ length: Math.floor(Math.random() * 2) }, () => ({
+    // -- Care Gaps (70% of patients have gaps) --
+    const gapTypes = Object.values(GapType);
+    const activeGaps: CareGap[] = Math.random() < 0.7 ? Array.from({ length: 1 + Math.floor(Math.random() * 3) }, (_, gi) => {
+      const gapType = getRandom(gapTypes);
+      const details = GAP_DETAILS[gapType];
+      return {
+        id: `G${i * 10 + gi}`,
+        type: gapType,
+        detail: getRandom(details),
+        daysOverdue: Math.floor(Math.random() * 400),
+        clinicalImpact: getRandom(['High', 'Medium', 'Low']) as 'High' | 'Medium' | 'Low',
+        status: getRandom(['Pending', 'In Progress', 'Resolved']) as 'Pending' | 'In Progress' | 'Resolved',
+        assignedTo: `Dr. ${getRandom(['Al-Rashid', 'Kumar', 'Hassan', 'Patel'])}`,
+        priority: getRandom(['Critical', 'High', 'Medium', 'Low']) as 'Critical' | 'High' | 'Medium' | 'Low',
+        lastCompletedDate: Math.random() > 0.5 ? `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}` : undefined,
+        riskImpactScore: parseFloat((Math.random() * 10).toFixed(1))
+      };
+    }) : [];
+
+    // -- Safety Alerts (50% of patients have alerts) --
+    const guardrailTypes = Object.values(GuardrailType);
+    const medications = ['Warfarin', 'Metformin', 'Lisinopril', 'Atorvastatin', 'Amiodarone', 'Digoxin', 'Heparin', 'Morphine', 'Cisplatin', 'Rituximab', 'Furosemide', 'Spironolactone'];
+    const conflicts = [
+      'Concurrent use with nephrotoxic agent', 'Allergy cross-reactivity detected', 'Dosage exceeds renal-adjusted limit',
+      'CYP3A4 interaction with current regimen', 'Contraindicated in heart failure', 'Duplicate therapeutic class',
+      'INR > 4.0 with current dosing', 'Potassium-sparing conflict', 'QT prolongation risk', 'Hepatic impairment contraindication'
+    ];
+    const safetyAlerts: SafetyAlert[] = Math.random() < 0.5 ? Array.from({ length: 1 + Math.floor(Math.random() * 3) }, (_, si) => ({
+      id: `SA${i * 10 + si}`,
+      type: getRandom(guardrailTypes),
+      severity: getRandom(Object.values(RiskLevel)),
+      medication: getRandom(medications),
+      conflict: getRandom(conflicts),
+      detectedOn: `2026-02-${String(Math.floor(Math.random() * 15) + 1).padStart(2, '0')}`,
+      provider: `Dr. ${getRandom(['Al-Rashid', 'Kumar', 'Hassan', 'Patel'])}`,
+      riskImpact: parseFloat((Math.random() * 10).toFixed(1)),
+      status: getRandom(['Active', 'Resolved', 'Overridden']) as 'Active' | 'Resolved' | 'Overridden',
+      recommendation: getRandom([
+        'Discontinue and substitute with safer alternative',
+        'Reduce dosage and monitor renal function',
+        'Add protective co-therapy (PPI / Potassium)',
+        'Consult pharmacist for regimen review',
+        'Switch to non-interacting agent',
+        'Order stat lab panel before next dose'
+      ])
+    })) : [];
+
+    // -- Guideline Adherence (65% of patients have guidelines) --
+    const guidelineCategories = Object.values(GuidelineType);
+    const complianceStatuses = Object.values(ComplianceStatus);
+    const protocols = [
+      'HbA1c Monitoring Q3M', 'Post-MI Beta-Blocker Therapy', 'Colon Cancer Screening',
+      'Annual Wellness Visit', 'CHF Med Optimization', 'Lipid Panel Monitoring',
+      'Blood Pressure Control Protocol', 'Diabetic Eye Exam', 'ACE Inhibitor for CKD',
+      'Fall Risk Assessment', 'Depression Screening PHQ-9', 'Pneumonia Vaccination'
+    ];
+    const deviationTypes = [
+      'Overdue monitoring', 'Therapy not initiated', 'Incomplete documentation',
+      'Non-formulary substitution', 'Protocol deviation', 'Missed assessment window'
+    ];
+    const guidelineAdherence: GuidelineAdherence[] = Math.random() < 0.65 ? Array.from({ length: 1 + Math.floor(Math.random() * 3) }, (_, gi) => ({
+      id: `GL${i * 10 + gi}`,
+      protocol: getRandom(protocols),
+      category: getRandom(guidelineCategories),
+      status: getRandom(complianceStatuses),
+      deviationType: getRandom(deviationTypes),
+      dueDate: `2026-02-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+      daysOverdue: Math.floor(Math.random() * 120),
+      impactLevel: getRandom(['High', 'Moderate', 'Low']) as 'High' | 'Moderate' | 'Low',
+      requiredAction: getRandom(['Order lab test', 'Prescribe medication', 'Schedule visit', 'Complete assessment', 'Update care plan']),
+      actualAction: Math.random() > 0.4 ? getRandom(['Partial compliance', 'Alternative approach used', 'Deferred by provider']) : undefined,
+      evidenceSource: getRandom(['AHA/ACC 2024', 'ADA Standards 2025', 'USPSTF Grade A', 'KDIGO 2024', 'GOLD 2025']),
+      riskOfNonAdherence: getRandom(['Increased readmission risk', 'Disease progression', 'Adverse outcome', 'Quality metric failure', 'Regulatory non-compliance'])
+    })) : [];
+
+    const complianceScore = guidelineAdherence.length > 0
+      ? Math.floor(guidelineAdherence.filter(g => g.status === ComplianceStatus.COMPLIANT).length / guidelineAdherence.length * 100)
+      : Math.floor(60 + Math.random() * 40);
+
+    // -- Abnormal Results (55% of patients have abnormal results) --
+    const abnormalCategories = Object.values(AbnormalCategory);
+    const abnormalStatuses = Object.values(AbnormalResultStatus);
+    const testNames: Record<string, string[]> = {
+      [AbnormalCategory.LAB]: ['Troponin I', 'Creatinine', 'Potassium', 'HbA1c', 'BNP', 'WBC', 'Hemoglobin', 'Platelets', 'ALT', 'TSH'],
+      [AbnormalCategory.IMAGING]: ['Chest X-Ray', 'CT Abdomen', 'MRI Brain', 'Echocardiogram', 'Bone Density'],
+      [AbnormalCategory.VITAL_SIGNS]: ['Blood Pressure', 'Heart Rate', 'SpO2', 'Temperature', 'Respiratory Rate'],
+      [AbnormalCategory.DIAGNOSTICS]: ['ECG', 'Pulmonary Function', 'Stress Test', 'Sleep Study', 'EEG']
+    };
+    const normalRanges: Record<string, string> = {
+      'Troponin I': '0-0.04 ng/mL', 'Creatinine': '0.7-1.3 mg/dL', 'Potassium': '3.5-5.0 mEq/L',
+      'HbA1c': '4.0-5.6%', 'BNP': '0-100 pg/mL', 'WBC': '4.5-11.0 K/uL', 'Hemoglobin': '12-17 g/dL',
+      'Platelets': '150-400 K/uL', 'ALT': '7-56 U/L', 'TSH': '0.4-4.0 mIU/L',
+      'Blood Pressure': '90/60-120/80 mmHg', 'Heart Rate': '60-100 bpm', 'SpO2': '95-100%',
+      'Temperature': '36.1-37.2°C', 'Respiratory Rate': '12-20 /min',
+      'Chest X-Ray': 'Normal', 'CT Abdomen': 'Normal', 'MRI Brain': 'Normal',
+      'Echocardiogram': 'EF 55-70%', 'Bone Density': 'T-score > -1.0',
+      'ECG': 'Normal Sinus', 'Pulmonary Function': 'FEV1 > 80%', 'Stress Test': 'Normal',
+      'Sleep Study': 'AHI < 5', 'EEG': 'Normal'
+    };
+    const abnormalValues: Record<string, string[]> = {
+      'Troponin I': ['0.12 ng/mL', '0.28 ng/mL', '0.08 ng/mL'], 'Creatinine': ['2.1 mg/dL', '3.4 mg/dL', '1.8 mg/dL'],
+      'Potassium': ['5.8 mEq/L', '6.2 mEq/L', '3.1 mEq/L'], 'HbA1c': ['8.2%', '9.1%', '7.4%'],
+      'BNP': ['450 pg/mL', '820 pg/mL', '240 pg/mL'], 'WBC': ['14.2 K/uL', '18.5 K/uL', '2.8 K/uL'],
+      'Hemoglobin': ['8.2 g/dL', '7.1 g/dL', '10.4 g/dL'], 'Platelets': ['85 K/uL', '42 K/uL', '520 K/uL'],
+      'ALT': ['120 U/L', '245 U/L', '82 U/L'], 'TSH': ['8.2 mIU/L', '0.1 mIU/L', '12.5 mIU/L'],
+      'Blood Pressure': ['165/105 mmHg', '182/110 mmHg', '78/45 mmHg'], 'Heart Rate': ['122 bpm', '42 bpm', '138 bpm'],
+      'SpO2': ['88%', '91%', '84%'], 'Temperature': ['39.2°C', '38.8°C', '40.1°C'],
+      'Respiratory Rate': ['28 /min', '32 /min', '8 /min'],
+      'Chest X-Ray': ['Bilateral infiltrates', 'Pleural effusion'], 'CT Abdomen': ['Mass detected', 'Bowel obstruction'],
+      'MRI Brain': ['Acute infarct', 'Mass lesion'], 'Echocardiogram': ['EF 25%', 'EF 35%'],
+      'Bone Density': ['T-score -2.8', 'T-score -3.2'],
+      'ECG': ['ST elevation', 'Atrial fibrillation', 'Ventricular tachycardia'],
+      'Pulmonary Function': ['FEV1 42%', 'FEV1 55%'], 'Stress Test': ['Ischemic changes', 'Exercise intolerance'],
+      'Sleep Study': ['AHI 32', 'AHI 18'], 'EEG': ['Epileptiform activity', 'Focal slowing']
+    };
+    const abnormalResults: AbnormalResult[] = Math.random() < 0.55 ? Array.from({ length: 1 + Math.floor(Math.random() * 3) }, (_, ri) => {
+      const cat = getRandom(abnormalCategories);
+      const tests = testNames[cat];
+      const test = getRandom(tests);
+      return {
+        id: `AR${i * 10 + ri}`,
+        category: cat,
+        testName: test,
+        value: getRandom(abnormalValues[test] || ['Abnormal']),
+        normalRange: normalRanges[test] || 'Normal',
+        severity: getRandom(Object.values(RiskLevel)),
+        timestamp: `2026-02-${String(Math.floor(Math.random() * 15) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+        status: getRandom(abnormalStatuses),
+        assignedTo: `Dr. ${getRandom(['Al-Rashid', 'Kumar', 'Hassan', 'Patel'])}`,
+        trend: getRandom(['up', 'down', 'stable']) as 'up' | 'down' | 'stable',
+        clinicalConflict: Math.random() > 0.6 ? getRandom(['Conflicts with current medication regimen', 'Unexpected given recent treatment', 'Indicates possible sepsis']) : undefined,
+        impactScore: parseFloat((Math.random() * 10).toFixed(1))
+      };
+    }) : [];
+
+    // -- Medication Risk Score & Override Frequency --
+    const medicationRiskScore = parseFloat((Math.random() * 10).toFixed(1));
+    const overrideFrequency = Math.floor(Math.random() * 8);
+
+    // -- Behavioral Anomalies (same as before but slightly higher rate) --
+    const behavioralAnomalies: BehavioralAnomaly[] = Array.from({ length: Math.floor(Math.random() * 3) }, () => ({
       id: `BA${Math.floor(Math.random() * 10000)}`,
       type: getRandom(Object.values(BehaviorType)),
       severity: getRandom(Object.values(RiskLevel)),
@@ -200,7 +340,14 @@ export const generateMockPatients = (count: number): Patient[] => {
       recommendedAction: getRandom(['Schedule pharmacist consult', 'Care coordinator outreach', 'Re-education session', 'Social work referral']),
       status: getRandom(['Pending', 'In Progress', 'Actioned', 'Scheduled']),
       impactScore: parseFloat((Math.random() * 15).toFixed(1)),
-      details: 'Patient missed 3 consecutive dosing intervals.'
+      details: getRandom([
+        'Patient missed 3 consecutive dosing intervals.',
+        'Declined recommended follow-up appointment.',
+        'Significant drop in portal engagement over 30 days.',
+        'Repeated no-shows for scheduled lab work.',
+        'Self-discontinued prescribed therapy without consultation.',
+        'Refused recommended imaging study.'
+      ])
     }));
 
     const transitions: CareTransition[] = i < count * 0.3 ? [
@@ -256,13 +403,13 @@ export const generateMockPatients = (count: number): Patient[] => {
       careTeam: [`Dr. ${getRandom(['Al-Rashid', 'Kumar', 'Hassan'])}`],
       vulnerabilityFactors: [],
       trend: parseFloat((Math.random() * 2.5 - 1).toFixed(1)),
-      activeGaps: [],
-      safetyAlerts: [],
-      medicationRiskScore: 0,
-      overrideFrequency: 0,
-      guidelineAdherence: [],
-      complianceScore: 0,
-      abnormalResults: [],
+      activeGaps,
+      safetyAlerts,
+      medicationRiskScore,
+      overrideFrequency,
+      guidelineAdherence,
+      complianceScore,
+      abnormalResults,
       behavioralAnomalies,
       engagementScore: Math.floor(30 + Math.random() * 70),
       behavioralRiskTier: getRandom(['Low', 'Moderate', 'High', 'Critical']),
